@@ -255,6 +255,7 @@ void objectTreeValues(const std::string &service,
         std::vector<std::string> interfaceList;
         auto children = readXml(xml_stream, interfaceMatch, &interfaceList);
         PropertyStringMap stringValues;
+        InterfaceProperties interfaceData;
         for (const auto & intf_name : interfaceList)
         {
             auto propertiesValues = getProperties(service, path, intf_name);
@@ -262,15 +263,13 @@ void objectTreeValues(const std::string &service,
             {
                 copyPropertyMapToPropertyStringMap(propertiesValues,
                                                    &stringValues);
-                InterfaceProperties interfaceData;
                 interfaceData[intf_name] = stringValues;
-                (*tree)[path] = interfaceData;
             }
         }
-//        if (stringValues.empty() == false)
-//        {
-//            (*tree)[path] = stringValues;
-//        }
+        if (interfaceData.empty() == false)
+        {
+            (*tree)[path] = interfaceData;
+        }
         for (auto const& child:  children)
         {
             std::string child_path(path);
