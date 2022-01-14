@@ -251,7 +251,7 @@ void objectTreeValues(const std::string &service,
         auto response = _bus.call(msg);
         response.read(xml);
         std::istringstream xml_stream(xml);
-        printf("%s\n", xml.c_str());
+//        printf("%s\n", xml.c_str());
         std::vector<std::string> interfaceList;
         auto children = readXml(xml_stream, interfaceMatch, &interfaceList);
         PropertyStringMap stringValues;
