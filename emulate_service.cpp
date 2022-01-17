@@ -2,29 +2,28 @@
 #include "config.h"
 #include <boost/asio/io_service.hpp>
 #include <sdbusplus/asio/object_server.hpp>
-
+#include <boost/algorithm/string.hpp>
+#include <fstream>
 #include <map>
 #include <string>
 
 boost::asio::io_service io;
-std::map<std::string, std::string>  propMz;
 
+const std::string const_service   {"service:"};
+const std::string const_path      {"path:"};
+const std::string const_interface {"interface:"};
 
-int emulate_service(char *argv[])
+int emulate_service(char *filename)
 {
-    (void) argv;
-    return 0;
+    std::ifstream file(filename);
+    if (file.is_open() == false)
+    {
+        fprintf(stderr, "Error: could not open the file '%s'\n", filename);
+        return -ENOENT;
+    }
 
-    propMz["idade"] = "59";
-    propMz["nome"] = "carlos";
-    propMz["sobrenome"] = "mazieri";
     auto systemBus = std::make_shared<sdbusplus::asio::connection>(io);
     sdbusplus::asio::object_server objServer(systemBus);
-    systemBus->request_name(argv[1]);
-
-    std::shared_ptr<sdbusplus::asio::dbus_interface> iface =
-        objServer.add_interface("/xyz/openbmc_project/FruDevice",
-                                "xyz.openbmc_project.MzInterface");
 
     auto lambdaR =  []  (const std::string & propvalue) -> std::string
                         {
@@ -42,33 +41,84 @@ int emulate_service(char *argv[])
                             return 1;
                         };
 
-    for (const auto& item: propMz)
+    std::string service_name{};
+    std::string path{};
+    std::string interface{};
+    std::string line;
+    std::shared_ptr<sdbusplus::asio::dbus_interface> iface = nullptr;
+    unsigned int path_counter{0};
+    unsigned int interface_counter{0};
+    unsigned int properties_counter{0};
+    while (std::getline(file, line))
     {
-        std::string key   = item.first;
-        const std::string& value = propMz.at(key);
+        boost::algorithm::trim(line);
+        if (line.empty() == true || line.at(0) == '#') {continue;}
 
-#if 0
+        if (service_name.empty() == true && line.find(const_service) == 0)
+        {
+            service_name = line.substr(const_service.length());
+            boost::algorithm::trim(service_name);
+            systemBus->request_name(service_name.c_str());
+            continue;
+        }
+        else if (line.find(const_path) == 0)
+        {
+            path = line.substr(const_path.length());
+            boost::algorithm::trim(path);
+            path_counter++;
+            continue;
+        }
+        else if (line.find(const_interface) == 0)
+        {
+            interface = line.substr(const_interface.length());
+            boost::algorithm::trim(interface);
+            interface_counter++;
+            if (iface != nullptr)
+            {
+                iface->initialize();
+            }
+            iface = objServer.add_interface(path, interface);
+            continue;
+        }
+        else if (service_name.empty() == false && path.empty() == false)
+        {
+            auto pos = line.find('=');
+            if (pos != std::string::npos)
+            {
+                auto property = line.substr(0, pos);
+                auto value = line.substr(pos+1);
+                boost::algorithm::trim(property);
+                boost::algorithm::trim(value);
 
-        bool ok = iface->register_property_r(key,
-                                             value,
-                                             sdbusplus::vtable::property_::const_,
-                                             *lambdaR);
-#else
+                bool ok = iface->register_property_rw(property,
+                                                     value,
+                                                     sdbusplus::vtable::property_::emits_change,
+                                                     *lambdaRW,
+                                                     *lambdaR);
 
-        bool ok = iface->register_property_rw(key,
-                                             value,
-                                             sdbusplus::vtable::property_::emits_change,
-                                             *lambdaRW,
-                                             *lambdaR);
-#endif
+                if (ok == false)
+                {
+                    fprintf(stderr, "ERROR: property=%s value=%s \n",
+                               property.c_str(),value.c_str());
+                }
+                else
+                {
+                    properties_counter++;
+                }
+            }
+        }
+    }
+    file.close();
 
-        printf("item.first=%s item.second=%s ok=%d\n", key.c_str(),
-                                                        value.c_str(), ok);
+    printf("Object(s) Path(s): %u\n", path_counter);
+    printf("Interfaces(s)    : %u\n", interface_counter);
+    printf("Properties       : %u\n", properties_counter);
+    if (iface != nullptr && interface_counter > 0)
+    {
+        iface->initialize();
+        io.run();
+        return 0;
     }
 
-
-    iface->initialize();
-
-    io.run();
-
+    return 1;
 }
