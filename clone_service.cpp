@@ -273,7 +273,11 @@ void objectTreeValues(const std::string &service,
         for (auto const& child:  children)
         {
             std::string child_path(path);
-            child_path += '/' + child;
+            if (child_path != "/")
+            {
+               child_path += '/';
+            }
+            child_path += child;
             objectTreeValues(service, child_path, interfaceMatch, tree);
         }
     }
@@ -298,8 +302,21 @@ objectTreeValues(const std::string &service,
 {
     ObjectPropertyStringValue tree;
     objectTreeValues(service, path, interface, &tree);
-    printf("service: %s\n",  service.c_str());
-    printObjectPropertyStringValue(tree);
+    if (tree.empty() == true)
+    {
+        fprintf(stderr, "No items found, check 'service name' ");
+        if (path != "/")
+        {
+            fprintf(stderr, "and 'path'");
+
+        }
+        fprintf(stderr, "\n");
+    }
+    else
+    {
+        printf("service: %s\n",  service.c_str());
+        printObjectPropertyStringValue(tree);
+    }
 
     return tree;
 }
@@ -316,14 +333,7 @@ int clone_service(int argc, char *argv[])
     {
         path = argv[3];
     }
-    else
-    {
-        for (decltype(service.size()) counter = 0; counter < service.size(); ++counter)
-        {
-            path.push_back (service.at(counter) != '.' ?
-                                   service.at(counter) : '/') ;
-        }
-    }
-    objectTreeValues(service, path);
-    return 0;
+
+    auto tree = objectTreeValues(service, path);
+    return tree.empty() == true ?  1 : 0;
 }
