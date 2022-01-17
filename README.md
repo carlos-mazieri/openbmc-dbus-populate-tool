@@ -8,7 +8,7 @@ The idea is to clone data from a service on the real machine and then use this d
 
 The first command has to be invoked on the real machine, it print information which must be saved in a text file.
 Then the second command has to be invoked on the emulator, the text file generated from the first command has to be transferred from the real machine to the emulator.
-If the the service is active on the emulator it must be stopped before invoking the *openbmc-dbus-populate-tool*.
+If the the service is active on the emulator it must be stopped before invoking the *dbus-populate-tool*.
 
 ## Build
 ```
