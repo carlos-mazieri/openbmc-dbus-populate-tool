@@ -40,6 +40,21 @@ using InterfaceProperties = std::map<DbusInterface, PropertyStringMap>;
 using ObjectPropertyStringValue = std::map<DbusObjectPath, InterfaceProperties>;
 
 
+struct  MethoArgs
+{
+    std::string arg;
+    std::string type;
+    std::string direction;
+};
+
+using MethodArgsList = std::vector<MethoArgs>;
+using MethodArgsMap = std::map<std::string, MethodArgsList>;
+                            /*interface*/
+using InterfaceMethodMap =  std::map<std::string, MethodArgsMap>;
+
+
+InterfaceMethodMap interfaceMethodMap;
+
 namespace
 {
 
@@ -55,44 +70,45 @@ std::string variantToString(const Value &variantVar)
     std::string value;
     if (std::holds_alternative<std::string>(variantVar))
     {
-        value = std::get<std::string>(variantVar);
+        value = "s = " + std::get<std::string>(variantVar);
     }
     else if (std::holds_alternative<bool>(variantVar))
     {
         auto boolean = std::get<bool>(variantVar);
-        value = boolean == true ? "true" : "false";
+        value = "b = ";
+        value += boolean == true ? "true" : "false";
     }
     else if (std::holds_alternative<uint8_t>(variantVar))
     {
-        value = std::to_string(std::get<uint8_t>(variantVar));
+        value = value = "y = " +std::to_string(std::get<uint8_t>(variantVar));
     }
     else if (std::holds_alternative<int16_t>(variantVar))
     {
-        value = std::to_string(std::get<int16_t>(variantVar));
+        value = value = "n = " +std::to_string(std::get<int16_t>(variantVar));
     }
     else if (std::holds_alternative<uint16_t>(variantVar))
     {
-        value = std::to_string(std::get<uint16_t>(variantVar));
+        value = value = "q = " +std::to_string(std::get<uint16_t>(variantVar));
     }
     else if (std::holds_alternative<int32_t>(variantVar))
     {
-        value = std::to_string(std::get<int32_t>(variantVar));
+        value = value = "i = " +std::to_string(std::get<int32_t>(variantVar));
     }
     else if (std::holds_alternative<uint32_t>(variantVar))
     {
-        value = std::to_string(std::get<uint32_t>(variantVar));
+        value = value = "u = " + std::to_string(std::get<uint32_t>(variantVar));
     }
     else if (std::holds_alternative<int64_t>(variantVar))
     {
-        value = std::to_string(std::get<int64_t>(variantVar));
+        value = value = "x = " +std::to_string(std::get<int64_t>(variantVar));
     }
     else if (std::holds_alternative<uint64_t>(variantVar))
     {
-        value = std::to_string(std::get<uint64_t>(variantVar));
+        value = value = "t = " +std::to_string(std::get<uint64_t>(variantVar));
     }
     else if (std::holds_alternative<double>(variantVar))
     {
-        value = std::to_string(std::get<double>(variantVar));
+        value = value = "d = " +std::to_string(std::get<double>(variantVar));
     }
     else if (std::holds_alternative<std::vector<std::string>>(variantVar))
     {
@@ -101,7 +117,7 @@ std::string variantToString(const Value &variantVar)
         auto counter = array.size();
         if (counter > 0)
         {
-            value = array.at(0);
+            value = "s = " + array.at(0);
             for (counter = 1; counter < array.size(); ++counter)
             {
                 value += ' ' + array.at(counter);
@@ -147,9 +163,36 @@ readXml(std::istream& is,
                      || interface.find(interfaceMatch) != std::string::npos)
                && (interface.find("org.freedesktop.DBus.", 0) != 0))
            {
+               MethodArgsMap methodArgsMap;
                ifs->push_back(interface);
-           }
-
+               boost::property_tree::ptree intf =
+                       (boost::property_tree::ptree) f.second ;
+               BOOST_FOREACH(ptree::value_type const& fint, intf)
+               {
+                   if (fint.first == "method")
+                   {
+                       auto mname = fint.second.get("<xmlattr>.name", "");
+                       boost::property_tree::ptree args =
+                               (boost::property_tree::ptree) fint.second ;
+                       MethodArgsList methodList;
+                       BOOST_FOREACH(ptree::value_type const& arg, args)
+                       {
+                           if (arg.first == "arg")
+                           {
+                               MethoArgs mArgs;
+                               mArgs.arg = arg.second.get("<xmlattr>.name", "");
+                               mArgs.type =
+                                       arg.second.get("<xmlattr>.type", "");
+                               mArgs.direction =
+                                       arg.second.get("<xmlattr>.direction", "");
+                               methodList.push_back(mArgs);
+                           }
+                       }
+                       methodArgsMap[mname] = methodList;
+                   } // end method getting data
+               }
+               interfaceMethodMap[interface] = methodArgsMap;
+           } // got a wanted interface
         }
     }
     return children;
@@ -166,11 +209,25 @@ void printObjectPropertyStringValue(const ObjectPropertyStringValue &tree)
     {
         std::string subpath = item.first;
         printf("\npath:%s\n", subpath.c_str());
-        for (auto &intf : item.second)
+        for (const auto &intf : item.second)
         {
             std::string interface = intf.first;
             printf("\tinterface:%s\n", interface.c_str());
-            for (auto& prop : intf.second)
+
+            // print methods
+            const auto& mlist = interfaceMethodMap[interface];
+            for (const auto& method : mlist)
+            {
+                printf("\t #method:%-30s\n", method.first.c_str());
+                for (const auto& args: method.second)
+                {
+                      printf("\t   #arg:%s type:%s direction:%s\n",
+                               args.arg.c_str(), args.type.c_str(), args.direction.c_str());
+                }
+            }
+
+            // print properties
+            for (const auto& prop : intf.second)
             {
                 std::string property = prop.first;
                 std::string value = prop.second;
@@ -251,7 +308,7 @@ void objectTreeValues(const std::string &service,
         auto response = _bus.call(msg);
         response.read(xml);
         std::istringstream xml_stream(xml);
-//        printf("%s\n", xml.c_str());
+     //   printf("%s\n", xml.c_str());
         std::vector<std::string> interfaceList;
         auto children = readXml(xml_stream, interfaceMatch, &interfaceList);
         PropertyStringMap stringValues;
@@ -259,7 +316,8 @@ void objectTreeValues(const std::string &service,
         for (const auto & intf_name : interfaceList)
         {
             auto propertiesValues = getProperties(service, path, intf_name);
-            if (propertiesValues.empty() == false)
+            if (propertiesValues.empty() == false ||
+                    interfaceMethodMap.count(intf_name) != 0)
             {
                 copyPropertyMapToPropertyStringMap(propertiesValues,
                                                    &stringValues);

@@ -5,6 +5,7 @@
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <string>
+#include <vector>
 
 namespace local
 {
@@ -26,6 +27,25 @@ unsigned int path_counter{0};
 unsigned int interface_counter{0};
 unsigned int properties_counter{0};
 
+template <typename PropertyType>
+bool createProperty(const std::string& propName, PropertyType& value)
+{
+    auto ok = iface->register_property_rw(propName, value,
+                               sdbusplus::vtable::property_::emits_change,
+    [](const PropertyType& newValue,
+       const PropertyType& oldValue)
+    {
+        PropertyType & nVl = const_cast<PropertyType&>(oldValue);
+        nVl = newValue;
+        return 1;
+    },
+    [](const PropertyType & propvalue) -> PropertyType
+    {
+        return propvalue;
+    });
+    return ok;
+}
+
 //=======================================================================
 /**
 * @brief parse_line parses a single line and perform the service populate
@@ -33,11 +53,8 @@ unsigned int properties_counter{0};
 * @return true OK, false some error
 */
 //=======================================================================
-template <typename CallbackTypeSet, typename CallbackTypeGet>
 bool parse_line(const std::string& line,
-                sdbusplus::asio::object_server& objServer,
-                CallbackTypeSet && setFunction,
-                CallbackTypeGet && getFunction)
+                sdbusplus::asio::object_server& objServer)
 {
     if (service_name.empty() == true && line.find(const_service) == 0)
     {
@@ -77,17 +94,85 @@ bool parse_line(const std::string& line,
         auto pos = line.find('=');
         if (pos != std::string::npos)
         {
-            auto property = line.substr(0, pos);
-            auto value = line.substr(pos+1);
+            std::vector<std::string> sessions;
+            boost::split(sessions, line, boost::is_any_of("="));
+            if (sessions.size() < 3)
+            {
+                return true;
+            }
+            auto property = sessions.at(0);
+            auto value =  sessions.at(2);
+            auto type  = sessions.at(1);
             boost::algorithm::trim(property);
             boost::algorithm::trim(value);
+            boost::algorithm::trim(type);
 
-            bool ok = iface->register_property_rw(property,
-                                  value,
-                                  sdbusplus::vtable::property_::emits_change,
-                                  setFunction,
-                                  getFunction);
-
+            bool ok = false;
+            switch (type.at(0))
+            {
+                case 'y': // int8_t
+                {
+                    uint8_t byte = static_cast<uint8_t>(std::stoi(value));
+                    ok = createProperty(property, byte);
+                    break;
+                }
+                case 'b': // bool
+                {
+                    bool boolean =
+                        (value == "yes"|| value == "Yes" || value == "YES") ?
+                                            true : false;
+                    ok = createProperty(property, boolean);
+                    break;
+                }
+                case 'n': // int16_t
+                {
+                    int16_t intV = static_cast<int16_t>(std::stoi(value));
+                    ok = createProperty(property, intV);
+                    break;
+                }
+                case 'q':  // uint16_t
+                {
+                    uint16_t intV = static_cast<uint16_t>(std::stoi(value));
+                    ok = createProperty(property, intV);
+                    break;
+                }
+                case 'i':  // int32_t
+                {
+                    int32_t intV = static_cast<int32_t>(std::stol(value));
+                    ok = createProperty(property, intV);
+                    break;
+                }
+                case 'u':  // uint32_t
+                {
+                    uint32_t intV = static_cast<uint32_t>(std::stol(value));
+                    ok = createProperty(property, intV);
+                    break;
+                }
+                case 'x':  // int64_t
+                {
+                    int64_t intV = static_cast<int64_t>(std::stoll(value));
+                    ok = createProperty(property, intV);
+                    break;
+                }
+                case 't':  // uint64_t
+                {
+                    uint64_t intV = static_cast<uint64_t>(std::stoll(value));
+                    ok = createProperty(property, intV);
+                    break;
+                }
+                case 'd':  // double
+                {
+                    double intV = static_cast<double>(std::stod(value));
+                    ok = createProperty(property, intV);
+                    break;
+                }
+                case 's':
+                default:
+                {
+                    ok = createProperty(property, value);
+                    break;
+                }
+            }
             if (ok == false)
             {
                 fprintf(stderr, "ERROR: property=%s value=%s \n",
@@ -126,25 +211,13 @@ int emulate_service(char *filename)
     local::systemBus = std::make_shared<sdbusplus::asio::connection>(local::io);
     sdbusplus::asio::object_server objServer(local::systemBus);
 
-    auto lambdaR =  [](const std::string & propvalue) -> std::string
-                     {
-                            return propvalue;
-                     };
-    auto lambdaRW =  [](const std::string & newValue,
-                        const std::string & oldValue)
-                     {
-                         std::string & mz = const_cast<std::string&>(oldValue);
-                         mz = newValue;
-                         return 1;
-                     };
-
     bool ok = true;
     std::string line;
     while (std::getline(file, line) && ok == true)
     {
         boost::algorithm::trim(line);
         if (line.empty() == true || line.at(0) == '#') {continue;}
-        ok = local::parse_line(line, objServer, *lambdaRW, *lambdaR);
+        ok = local::parse_line(line, objServer);
     }
     file.close();
 
