@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <iostream>
 
 namespace local
 {
@@ -126,25 +127,25 @@ bool parse_line(const std::string& line,
                 }
                 case 'n': // int16_t
                 {
-                    int16_t intV = static_cast<int16_t>(std::stoi(value));
+                    int16_t intV = static_cast<int16_t>(std::stol(value));
                     ok = createProperty(property, intV);
                     break;
                 }
                 case 'q':  // uint16_t
                 {
-                    uint16_t intV = static_cast<uint16_t>(std::stoi(value));
+                    uint16_t intV = static_cast<uint16_t>(std::stol(value));
                     ok = createProperty(property, intV);
                     break;
                 }
                 case 'i':  // int32_t
                 {
-                    int32_t intV = static_cast<int32_t>(std::stol(value));
+                    int32_t intV = static_cast<int32_t>(std::stoll(value));
                     ok = createProperty(property, intV);
                     break;
                 }
                 case 'u':  // uint32_t
                 {
-                    uint32_t intV = static_cast<uint32_t>(std::stol(value));
+                    uint32_t intV = static_cast<uint32_t>(std::stoll(value));
                     ok = createProperty(property, intV);
                     break;
                 }
@@ -213,9 +214,11 @@ int emulate_service(char *filename)
 
     bool ok = true;
     std::string line;
+    //int line_counter = 1;
     while (std::getline(file, line) && ok == true)
     {
         boost::algorithm::trim(line);
+      //  std::cout <<  "line:" << line_counter++ << std::endl;
         if (line.empty() == true || line.at(0) == '#') {continue;}
         ok = local::parse_line(line, objServer);
     }
