@@ -78,6 +78,8 @@ bool parse_line(const std::string& line,
         path = line.substr(const_path.length());
         boost::algorithm::trim(path);
         path_counter++;
+        std::cout << "creating object path [" << path_counter << "] " <<
+                     path << std::endl;
     }
     else if (line.find(const_interface) == 0)
     {

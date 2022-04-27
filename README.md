@@ -38,103 +38,41 @@ $ dbus-populate-tool service /tmp/EntityManager.txt  ## supposing scp command ab
 
 ## Sample of the output printed by '*dbus-populate-tool copy*' command
 ```
+service: xyz.openbmc_project.GpuMgr
 
-service: xyz.openbmc_project.EntityManager
+path:/xyz/openbmc_project/GpuMgr
+	interface:xyz.openbmc_project.GpuMgr.Server
+	 #method:Passthrough
+	   #arg: type:i direction:in
+	   #arg: type:y direction:in
+	   #arg: type:y direction:in
+	   #arg: type:y direction:in
+	   #arg: type:au direction:in
+	   #arg: type:(iau) direction:out
+	 #method:PassthroughFpga
+	   #arg: type:i direction:in
+	   #arg: type:y direction:in
+	   #arg: type:y direction:in
+	   #arg: type:y direction:in
+	   #arg: type:au direction:in
+	   #arg: type:(iau) direction:out
 
-path:/xyz/openbmc_project/inventory/system/board/Yosemite_V2_Baseboard
-	interface:xyz.openbmc_project.Inventory.Decorator.Asset
-		Manufacturer                   = Wiwynn
- 		Model                          = Yosemite V2 MP
- 		PartNumber                     = B91.01501.0055
- 		SerialNumber                   = WTL202224FMA1
- 	interface:xyz.openbmc_project.Inventory.Item.Board
-		Manufacturer                   = Wiwynn
- 		Model                          = Yosemite V2 MP
- 		Name                           = Yosemite V2 Baseboard
- 		PartNumber                     = B91.01501.0055
- 		Probe                          = xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Yosemite V2 .*'})
- 		SerialNumber                   = WTL202224FMA1
- 		Type                           = Board
-path:/xyz/openbmc_project/inventory/system/board/Yosemite_V2_Baseboard/HSC
-	interface:xyz.openbmc_project.Configuration.pmbus
-		Address                        = 64
- 		Bus                            = 10
- 		Direction                      = greater than
- 		Label                          = vin
- 		Labels                         = vin iout1 pin temp1 maxvin maxiout1 maxpin maxtemp1
- 		Name                           = HSC
- 		Severity                       = 1.000000
- 		Type                           = pmbus
- 		Value                          = 13.750000
- 	interface:xyz.openbmc_project.Configuration.pmbus.Thresholds0
-		Direction                      = greater than
- 		Label                          = vin
- 		Name                           = upper critical
- 		Severity                       = 1.000000
- 		Value                          = 13.750000
- 	interface:xyz.openbmc_project.Configuration.pmbus.Thresholds1
-		Direction                      = less than
- 		Label                          = vin
- 		Name                           = lower critical
- 		Severity                       = 0.000000
- 		Value                          = 11.250000
- 	interface:xyz.openbmc_project.Configuration.pmbus.Thresholds2
-		Direction                      = greater than
- 		Label                          = iout1
- 		Name                           = upper critical
- 		Severity                       = 1.000000
- 		Value                          = 52.000000
- 	interface:xyz.openbmc_project.Configuration.pmbus.Thresholds3
-		Direction                      = greater than
- 		Label                          = pin
- 		Name                           = upper critical
- 		Severity                       = 1.000000
- 		Value                          = 625.000000
- 	interface:xyz.openbmc_project.Configuration.pmbus.Thresholds4
-		Direction                      = less than
- 		Label                          = temp1
- 		Name                           = upper critical
- 		Severity                       = 1.000000
- 		Value                          = 105.000000
- 	interface:xyz.openbmc_project.Configuration.pmbus.Thresholds5
-		Direction                      = less than
- 		Label                          = peakvin
- 		Name                           = lower critical
- 		Severity                       = 1.000000
- 		Value                          = 0.000000
- 	interface:xyz.openbmc_project.Configuration.pmbus.Thresholds6
-		Direction                      = less than
- 		Label                          = maxiout1
- 		Name                           = lower critical
- 		Severity                       = 1.000000
- 		Value                          = 0.000000
- 	interface:xyz.openbmc_project.Configuration.pmbus.Thresholds7
-		Direction                      = less than
- 		Label                          = maxpin
- 		Name                           = lower critical
- 		Severity                       = 1.000000
- 		Value                          = 0.000000
- 	interface:xyz.openbmc_project.Configuration.pmbus.Thresholds8
-		Direction                      = less than
- 		Label                          = maxtemp1
- 		Name                           = lower critical
- 		Severity                       = 1.000000
- 		Value                          = 0.000000
-
-path:/xyz/openbmc_project/inventory/system/board/Yosemite_V2_Baseboard/IpmbBus1
-	interface:xyz.openbmc_project.Configuration.IPMIChannels
-		Bus                            = ipmb
- 		Index                          = 0
- 		Name                           = IpmbBus1
- 		Type                           = IPMIChannels
-
-path:/xyz/openbmc_project/inventory/system/board/Yosemite_V2_Baseboard/IpmbBus2
-	interface:xyz.openbmc_project.Configuration.IPMIChannels
-		Bus                            = ipmb
- 		Index                          = 1
- 		Name                           = IpmbBus2
- 		Type                           = IPMIChannels
-
-
+path:/xyz/openbmc_project/inventory/system/chassis/Baseboard
+	interface:xyz.openbmc_project.Association.Definitions
+		Associations                   =
+ 	interface:xyz.openbmc_project.Inventory.Decorator.Asset
+		Associations                   =
+ 		CurrentPowerState              = s = xyz.openbmc_project.State.Chassis.PowerState.On
+ 		Manufacturer                   = s = NVIDIA
+ 		Name                           = s = 
+ 	interface:xyz.openbmc_project.Inventory.Item.Chassis
+		Associations                   =
+ 		CurrentPowerState              = s = xyz.openbmc_project.State.Chassis.PowerState.On
+ 		Manufacturer                   = s = NVIDIA
+ 		Name                           = s =
+ 		Type                           = s = xyz.openbmc_project.Inventory.Item.Chassis.ChassisType.Zone
+ 	interface:xyz.openbmc_project.State.Chassis
+		Associations                   =
+ 		CurrentPowerState              = s = xyz.openbmc_project.State.Chassis.PowerState.On
 ```
 
