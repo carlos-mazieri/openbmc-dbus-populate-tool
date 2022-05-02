@@ -25,6 +25,7 @@ executable(
     'main.cpp',
     'clone_service.cpp',
     'emulate_service.cpp',
+    'methods_map.cpp',
     dependencies: [deps],
     install: true
 )

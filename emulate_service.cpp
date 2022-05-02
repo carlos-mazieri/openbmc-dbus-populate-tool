@@ -1,5 +1,7 @@
 
 #include "config.h"
+#include "methods_map.hpp"
+
 #include <boost/asio/io_service.hpp>
 #include <sdbusplus/asio/object_server.hpp>
 #include <boost/algorithm/string.hpp>
@@ -16,10 +18,12 @@ boost::asio::io_service io;
 const std::string const_service   {"service:"};
 const std::string const_path      {"path:"};
 const std::string const_interface {"interface:"};
+const std::string const_method    {"method:"};
 
 std::string service_name{};
 std::string path{};
 std::string interface{};
+std::string method{};
 
 std::shared_ptr<sdbusplus::asio::dbus_interface> iface  = nullptr;
 std::shared_ptr<sdbusplus::asio::connection> systemBus = nullptr;
@@ -27,6 +31,7 @@ std::shared_ptr<sdbusplus::asio::connection> systemBus = nullptr;
 unsigned int path_counter{0};
 unsigned int interface_counter{0};
 unsigned int properties_counter{0};
+unsigned int method_counter{0};
 
 template <typename PropertyType>
 bool createProperty(const std::string& propName, PropertyType& value)
@@ -91,6 +96,15 @@ bool parse_line(const std::string& line,
             iface->initialize();
         }
         iface = objServer.add_interface(path, interface);
+    }
+    else if (line.find(const_method) == 0)
+    {
+        method = line.substr(const_method.length());
+        boost::algorithm::trim(method);
+        if (registerMethod(iface, service_name, path, interface, method))
+        {
+            method_counter++;
+        }
     }
     else if (service_name.empty() == false && path.empty() == false)
     {
@@ -231,8 +245,9 @@ int emulate_service(char *filename)
     {
         printf("Service          : %s\n", local::service_name.c_str());
         printf("Object(s) Path(s): %u\n", local::path_counter);
-        printf("Interfaces(s)    : %u\n", local::interface_counter);
+        printf("Interface(s)     : %u\n", local::interface_counter);
         printf("Properties       : %u\n", local::properties_counter);
+        printf("Methods          : %u\n", local::method_counter);
         local::iface->initialize();
         local::io.run();
         return 0;
