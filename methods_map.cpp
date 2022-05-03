@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include <stdlib.h>
+#include <time.h>
 
 namespace local
 {
@@ -37,19 +38,24 @@ DeviceGetData(int index, const std::string& callParam, int access)
     if (callParam == paramOverTemperatureInfo)
     {
         ret = "Baseboard GPU over temperature info : ";
-        unsigned int randomBit = random() % 8;
-        unsigned int bitmask = 1 << index | 1 << randomBit;
-        char hexValue[32];
-        ::snprintf(hexValue, sizeof(hexValue) -1, "%04x", bitmask);
-        ret += hexValue;
-        array.push_back((uint32_t)bitmask);
-        array.push_back((uint32_t)0);
-        std::cout << "DeviceGetData()" << " bitmask:" << bitmask
-                  << " hexValue:" << hexValue
-                  << " ret:" << ret
-                  << " " << array.at(0) << " " << array.at(1)
-                  << std::endl;
     }
+    else
+    {
+        ret = "property=" + callParam + " : ";
+    }
+    unsigned int randomBit = (unsigned int)time(0) % 8;
+    unsigned int bitmask = 1 << index | 1 << randomBit;
+    char hexValue[32];
+    ::snprintf(hexValue, sizeof(hexValue) -1, "%04x", bitmask);
+    ret += hexValue;
+    array.push_back((uint32_t)bitmask);
+    array.push_back((uint32_t)0);
+    std::cout << "DeviceGetData()" << " bitmask:" << bitmask
+              << " hexValue:" << hexValue
+              << " ret:" << ret
+              << " " << array.at(0) << " " << array.at(1)
+              << std::endl;
+    std::cout << std::endl;
     return std::make_tuple(0, ret, array);
 }
 

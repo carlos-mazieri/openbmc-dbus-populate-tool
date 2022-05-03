@@ -33,6 +33,8 @@ unsigned int interface_counter{0};
 unsigned int properties_counter{0};
 unsigned int method_counter{0};
 
+std::vector<std::string> method_list;
+
 template <typename PropertyType>
 bool createProperty(const std::string& propName, PropertyType& value)
 {
@@ -104,6 +106,7 @@ bool parse_line(const std::string& line,
         if (registerMethod(iface, service_name, path, interface, method))
         {
             method_counter++;
+            method_list.push_back(path + ":" + interface + ":" + method);
         }
     }
     else if (service_name.empty() == false && path.empty() == false)
@@ -247,7 +250,18 @@ int emulate_service(char *filename)
         printf("Object(s) Path(s): %u\n", local::path_counter);
         printf("Interface(s)     : %u\n", local::interface_counter);
         printf("Properties       : %u\n", local::properties_counter);
-        printf("Methods          : %u\n", local::method_counter);
+
+        std::string display_method_list{"0"};
+        if (local::method_counter > 0)
+        {
+            display_method_list.clear();
+            for (auto it = local::method_list.begin();
+                 it != local::method_list.end(); ++it)
+            {
+                display_method_list += *it + " ";
+            }
+        }
+        printf("Methods          : %s\n", display_method_list.c_str());
         local::iface->initialize();
         local::io.run();
         return 0;
