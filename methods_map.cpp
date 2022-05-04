@@ -32,12 +32,16 @@ std::tuple<int, std::string, std::vector<uint32_t>>
 DeviceGetData(int index, const std::string& callParam, int access)
 {
     std::string ret{"none"};
-    std::vector<uint32_t> array;
+    std::vector<uint32_t> array{0,0};
     (void) access;
     (void) index;
     if (callParam == paramOverTemperatureInfo)
     {
         ret = "Baseboard GPU over temperature info : ";
+    }
+    else if (callParam == "gpu.xid.event")
+    {
+        ret = "gpu.xid.event: 10 20 30 40 50 : ";
     }
     else
     {
@@ -48,8 +52,8 @@ DeviceGetData(int index, const std::string& callParam, int access)
     char hexValue[32];
     ::snprintf(hexValue, sizeof(hexValue) -1, "%04x", bitmask);
     ret += hexValue;
-    array.push_back((uint32_t)bitmask);
-    array.push_back((uint32_t)0);
+    array[0] = ((uint32_t)bitmask);
+    array[1] = ((uint32_t)0);
     std::cout << "DeviceGetData()" << " bitmask:" << bitmask
               << " hexValue:" << hexValue
               << " ret:" << ret
