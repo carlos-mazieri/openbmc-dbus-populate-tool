@@ -58,7 +58,7 @@ InterfaceMethodMap interfaceMethodMap;
 namespace
 {
 
- sdbusplus::bus::bus _bus = sdbusplus::bus::new_default_system();
+ sdbusplus::bus::bus _bus = sdbusplus::bus::new_default();
 
 /**
  * @brief variantToString
@@ -114,14 +114,28 @@ std::string variantToString(const Value &variantVar)
     {
         std::vector<std::string> array =
                 std::get<std::vector<std::string>>(variantVar);
+        value = "S = ";
         auto counter = array.size();
         if (counter > 0)
         {
-            value = "s = " + array.at(0);
+            value += array.at(0);
             for (counter = 1; counter < array.size(); ++counter)
             {
-                value += ' ' + array.at(counter);
+                value += '\t' + array.at(counter);
             }
+        }
+    }
+    else if(std::holds_alternative<std::vector<Association>>(variantVar))
+    {
+        std::vector<Association> associations =
+                std::get<std::vector<Association>>(variantVar);
+        value = "A = ";
+        for (auto& tuple_strings : associations)
+        {
+           auto str0 = std::get<0>(tuple_strings);
+           auto str1 = std::get<1>(tuple_strings);
+           auto str2 = std::get<2>(tuple_strings);
+           value += "\n\t\t\t(sss): " + str0 + '\t' + str1 + '\t' + str2;
         }
     }
     return value;
@@ -203,7 +217,8 @@ readXml(std::istream& is,
  * @brief printObjectPropertyStringValue
  * @param tree
  */
-void printObjectPropertyStringValue(const ObjectPropertyStringValue &tree)
+void printObjectPropertyStringValue(const ObjectPropertyStringValue &tree,
+                                    const std::string& /*service*/)
 {
     for (auto & item : tree)
     {
@@ -373,7 +388,7 @@ objectTreeValues(const std::string &service,
     else
     {
         printf("service: %s\n",  service.c_str());
-        printObjectPropertyStringValue(tree);
+        printObjectPropertyStringValue(tree, service);
     }
 
     return tree;

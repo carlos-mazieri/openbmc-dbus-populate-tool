@@ -16,8 +16,15 @@ If the the service is active on the emulator it must be stopped before invoking 
 $ .  <my-sdk-location>/environment-setup-arm1176jzs-openbmc-linux-gnueabi
 
 $ cd openbmc-dbus-populate-tool
-$ meson ../build
+$ meson [build-options] ../build
 $ ninja -v -C .../build
+```
+
+### Build options passed to meson
+There are two options:
+```
+ -Dreadonly=enabled   -> create properties are readonly, (default is readWrite)
+ -Dservicefile='"fullpath-filename"'   -> load this file instead accepting files from command line
 ```
 
 ## Running Examples

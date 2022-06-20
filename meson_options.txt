@@ -1,0 +1,2 @@
+option('readonly', type : 'feature', value : 'disabled', description: 'create read-only properties (default allow writing)')
+option('servicefile', type : 'string', value : '', description: 'an external service file to load (default is receive as parameter from command line')

@@ -1,6 +1,5 @@
-
 #include "config.h"
-#include "methods_map.hpp"
+#include "emulate_service.hpp"
 
 #include <boost/asio/io_service.hpp>
 #include <sdbusplus/asio/object_server.hpp>
@@ -9,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <tuple>
 
 namespace local
 {
@@ -35,24 +35,63 @@ unsigned int method_counter{0};
 
 std::vector<std::string> method_list;
 
+
+static int  serviceReadMethod = PROPERTY_READWRITE; // defaul allow changes
+
 template <typename PropertyType>
 bool createProperty(const std::string& propName, PropertyType& value)
 {
-    auto ok = iface->register_property_rw(propName, value,
-                               sdbusplus::vtable::property_::emits_change,
-    [](const PropertyType& newValue,
-       const PropertyType& oldValue)
+    auto flagsMethod = sdbusplus::asio::PropertyPermission::readWrite;
+    if (serviceReadMethod == PROPERTY_READONLY)
     {
-        PropertyType & nVl = const_cast<PropertyType&>(oldValue);
-        nVl = newValue;
-        return 1;
-    },
-    [](const PropertyType & propvalue) -> PropertyType
-    {
-        return propvalue;
-    });
+        flagsMethod = sdbusplus::asio::PropertyPermission::readOnly;
+    }
+    bool ok = iface->register_property(propName, value, flagsMethod);
     return ok;
 }
+
+
+struct AssociationInfo
+{
+    std::vector<std::tuple<std::string, std::string, std::string>> association;
+    bool active;
+    std::string property;
+
+    AssociationInfo() : active(false)
+    {
+
+    }
+    void store(std::vector<std::string>& array)
+    {
+        association.push_back(
+                    std::make_tuple(array.at(0),
+                                    array.at(1),
+                                    array.at(2)));
+    }
+    void clear()
+    {
+        association.erase(association.begin(), association.end());
+        active = false;
+    }
+    bool setProperty(const std::string& prop)
+    {
+        clear();
+        property = prop;
+        active = true;
+        return active;
+    }
+    bool create()
+    {
+        bool ok = active && association.empty() == false &&
+                       createProperty(property, association);
+        clear();
+        return ok;
+    }
+};
+
+
+AssociationInfo association;
+
 
 //=======================================================================
 /**
@@ -78,21 +117,47 @@ bool parse_line(const std::string& line,
                        service_name.c_str());
             return false;
         }
-
     }
-    else if (line.find(const_path) == 0)
+
+    if (association.active == true)
+    {
+        auto pos = line.find("(sss):");
+        if (pos != std::string::npos)
+        {
+            std::vector<std::string> sessions;
+            boost::split(sessions, line, boost::is_any_of(":"));
+            auto value =  sessions.at(1);
+            boost::algorithm::trim(value);
+            std::vector<std::string> arrayStrings;
+            boost::split(arrayStrings, value, boost::is_any_of("\t"));
+            association.store(arrayStrings);
+            return true;
+        }
+        else
+        {
+            association.create();
+        }
+    }
+
+    if (line.find(const_path) == 0)
     {
         path = line.substr(const_path.length());
         boost::algorithm::trim(path);
         path_counter++;
+#if !defined(DEFAULT_SERVICE_FILE)
         std::cout << "creating object path [" << path_counter << "] " <<
                      path << std::endl;
+#endif
     }
     else if (line.find(const_interface) == 0)
     {
         interface = line.substr(const_interface.length());
         boost::algorithm::trim(interface);
         interface_counter++;
+#if !defined(DEFAULT_SERVICE_FILE)
+        std::cout << "\tinterface[" << interface_counter << "] "
+                  << interface << std::endl;
+#endif
         if (iface != nullptr)
         {
             iface->initialize();
@@ -103,7 +168,7 @@ bool parse_line(const std::string& line,
     {
         method = line.substr(const_method.length());
         boost::algorithm::trim(method);
-        if (registerMethod(iface, service_name, path, interface, method))
+       // if (registerMethod(iface, service_name, path, interface, method))
         {
             method_counter++;
             method_list.push_back(path + ":" + interface + ":" + method);
@@ -186,6 +251,18 @@ bool parse_line(const std::string& line,
                     ok = createProperty(property, intV);
                     break;
                 }
+                case 'S': // array if strings
+                {
+                   std::vector<std::string> arrarStrings;
+                   boost::split(arrarStrings, value, boost::is_any_of("\t"));
+                   ok = createProperty(property, arrarStrings);
+                   break;
+                }
+                case 'A':
+                {
+                   ok = association.setProperty(property);
+                   break;
+                }
                 case 's':
                 default:
                 {
@@ -219,8 +296,10 @@ bool parse_line(const std::string& line,
  * @return 0 OK, not zero some problem
  */
 //=======================================================================
-int emulate_service(char *filename)
+int emulate_service(const char *filename, int serviceMethod)
 {
+    local::serviceReadMethod = serviceMethod;
+
     std::ifstream file(filename);
     if (file.is_open() == false)
     {
@@ -241,8 +320,8 @@ int emulate_service(char *filename)
         if (line.empty() == true || line.at(0) == '#') {continue;}
         ok = local::parse_line(line, objServer);
     }
+    local::association.create(); // if the Association was the last property
     file.close();
-
 
     if (ok == true && local::iface != nullptr && local::interface_counter > 0)
     {
@@ -262,6 +341,7 @@ int emulate_service(char *filename)
             }
         }
         printf("Methods          : %s\n", display_method_list.c_str());
+
         local::iface->initialize();
         local::io.run();
         return 0;
