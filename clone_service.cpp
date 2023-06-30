@@ -1,5 +1,5 @@
 #include "config.h"
-
+#include "methods_map.hpp"
 #include <boost/asio/io_service.hpp>
 #include <sdbusplus/asio/object_server.hpp>
 #include <boost/foreach.hpp>
@@ -218,7 +218,7 @@ readXml(std::istream& is,
  * @param tree
  */
 void printObjectPropertyStringValue(const ObjectPropertyStringValue &tree,
-                                    const std::string& /*service*/)
+                                    const std::string& service)
 {
     for (auto & item : tree)
     {
@@ -233,11 +233,19 @@ void printObjectPropertyStringValue(const ObjectPropertyStringValue &tree,
             const auto& mlist = interfaceMethodMap[interface];
             for (const auto& method : mlist)
             {
-                printf("\t #method:%-30s\n", method.first.c_str());
+                if (local::isMethodSupported(service, subpath, interface,
+                                             method.first))
+                {
+                     printf("\t method:%-30s\n", method.first.c_str());
+                }
+                else
+                {
+                    printf("\t #method:%-30s\n", method.first.c_str());
+                }
                 for (const auto& args: method.second)
                 {
-                      printf("\t   #arg:%s type:%s direction:%s\n",
-                               args.arg.c_str(), args.type.c_str(), args.direction.c_str());
+                    printf("\t   #arg:%s type:%s direction:%s\n",
+                           args.arg.c_str(), args.type.c_str(), args.direction.c_str());
                 }
             }
 
@@ -326,7 +334,7 @@ void objectTreeValues(const std::string &service,
      //  printf("%s\n", xml.c_str());
         std::vector<std::string> interfaceList;
         auto children = readXml(xml_stream, interfaceMatch, &interfaceList);
-        PropertyStringMap stringValues;
+
         InterfaceProperties interfaceData;
         for (const auto & intf_name : interfaceList)
         {
@@ -334,14 +342,20 @@ void objectTreeValues(const std::string &service,
             if (propertiesValues.empty() == false ||
                     interfaceMethodMap.count(intf_name) != 0)
             {
+                PropertyStringMap stringValues;
                 copyPropertyMapToPropertyStringMap(propertiesValues,
                                                    &stringValues);
                 interfaceData[intf_name] = stringValues;
             }
         }
-        if (interfaceData.empty() == false)
+        if ((interfaceData.empty() == false || children.empty() == false)
+            && path != "/")
         {
             (*tree)[path] = interfaceData;
+        }
+        else
+        {
+            printf ("interfaceData.empty() == true\n");
         }
         for (auto const& child:  children)
         {

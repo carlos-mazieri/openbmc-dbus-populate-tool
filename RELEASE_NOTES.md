@@ -1,5 +1,10 @@
 # RELEASE NOTES
 
+## Version 0.96 Jun 30 2023
+Added Methods Map examples.
+
+Considering empty object paths as they may appear on Associations.
+
 ## Version 0.95 Jun 12 2022
 Arrays and Associations are implemented.
 

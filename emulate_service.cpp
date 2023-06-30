@@ -1,4 +1,5 @@
 #include "config.h"
+#include "methods_map.hpp"
 #include "emulate_service.hpp"
 
 #include <boost/asio/io_service.hpp>
@@ -32,6 +33,7 @@ unsigned int path_counter{0};
 unsigned int interface_counter{0};
 unsigned int properties_counter{0};
 unsigned int method_counter{0};
+unsigned int association_counter{0};
 
 std::vector<std::string> method_list;
 
@@ -63,6 +65,10 @@ struct AssociationInfo
     }
     void store(std::vector<std::string>& array)
     {
+        while (array.size() < 3)
+        {
+            array.push_back(std::string{""});
+        }
         association.push_back(
                     std::make_tuple(array.at(0),
                                     array.at(1),
@@ -82,8 +88,15 @@ struct AssociationInfo
     }
     bool create()
     {
-        bool ok = active && association.empty() == false &&
-                       createProperty(property, association);
+        bool ok = active;
+
+        if (ok == true)
+        {
+            std::cout << "\t\tassociation [" << ++association_counter << "] "
+                      << path << " " << interface << " Associations" << std::endl;
+            // even empty it is necessary to create Association
+            ok = createProperty(property, association);
+        }
         clear();
         return ok;
     }
@@ -156,7 +169,7 @@ bool parse_line(const std::string& line,
         interface_counter++;
 #if !defined(DEFAULT_SERVICE_FILE)
         std::cout << "\tinterface[" << interface_counter << "] "
-                  << interface << std::endl;
+                  << path << " " << interface << std::endl;
 #endif
         if (iface != nullptr)
         {
@@ -168,7 +181,7 @@ bool parse_line(const std::string& line,
     {
         method = line.substr(const_method.length());
         boost::algorithm::trim(method);
-       // if (registerMethod(iface, service_name, path, interface, method))
+        if (registerMethod(iface, service_name, path, interface, method))
         {
             method_counter++;
             method_list.push_back(path + ":" + interface + ":" + method);
@@ -342,6 +355,7 @@ int emulate_service(const char *filename, int serviceMethod)
         }
         printf("Methods          : %s\n", display_method_list.c_str());
 
+        fflush(stdout);
         local::iface->initialize();
         local::io.run();
         return 0;
