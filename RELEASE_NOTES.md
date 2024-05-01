@@ -1,6 +1,6 @@
 # RELEASE NOTES
 
-## Version 0.96 Mar 15 2024
+## Version 0.97 Mar 15 2024
 #### Populating properly the Standard D-Bus interface 'org.freedesktop.DBus.ObjectManager' as following:
 ```
 org.freedesktop.DBus.ObjectManager       interface -          -             -
