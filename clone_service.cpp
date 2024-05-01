@@ -8,6 +8,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <map>
+#include <unordered_map>
 #include <string>
 
 using DbusObjectPath = std::string;
@@ -20,24 +21,28 @@ using Association = std::tuple<std::string, std::string, std::string>;
 
 using Value = std::variant<bool, uint8_t, int16_t, uint16_t, int32_t, uint32_t,
                            int64_t, uint64_t, double, std::string,
-                           std::vector<std::string>, std::vector<Association>>;
+                           std::vector<std::string>, std::vector<Association>,
+                           std::vector<uint8_t>,
+                           std::vector<int16_t>, std::vector<uint16_t>,
+                           std::vector<int32_t>, std::vector<uint32_t>,
+                           std::vector<int64_t>, std::vector<uint64_t>>;
 
-using PropertyMap = std::map<DbusProperty, Value>;
+using PropertyMap = std::unordered_map<DbusProperty, Value>;
 
 using ObjectTree =
-    std::map<DbusObjectPath, std::map<DbusService, std::vector<DbusInterface>>>;
+    std::unordered_map<DbusObjectPath, std::unordered_map<DbusService, std::vector<DbusInterface>>>;
 
 using InterfaceList = std::vector<std::string>;
 
-using DbusInterfaceMap = std::map<DbusInterface, PropertyMap>;
+using DbusInterfaceMap = std::unordered_map<DbusInterface, PropertyMap>;
 
 using ObjectValueTree =
-    std::map<sdbusplus::message::object_path, DbusInterfaceMap>;
+    std::unordered_map<sdbusplus::message::object_path, DbusInterfaceMap>;
 
 // property   value
-using PropertyStringMap   = std::map<DbusProperty, std::string>;
-using InterfaceProperties = std::map<DbusInterface, PropertyStringMap>;
-using ObjectPropertyStringValue = std::map<DbusObjectPath, InterfaceProperties>;
+using PropertyStringMap   = std::unordered_map<DbusProperty, std::string>;
+using InterfaceProperties = std::unordered_map<DbusInterface, PropertyStringMap>;
+using ObjectPropertyStringValue = std::unordered_map<DbusObjectPath, InterfaceProperties>;
 
 
 struct  MethoArgs
@@ -48,9 +53,9 @@ struct  MethoArgs
 };
 
 using MethodArgsList = std::vector<MethoArgs>;
-using MethodArgsMap = std::map<std::string, MethodArgsList>;
+using MethodArgsMap = std::unordered_map<std::string, MethodArgsList>;
                             /*interface*/
-using InterfaceMethodMap =  std::map<std::string, MethodArgsMap>;
+using InterfaceMethodMap =  std::unordered_map<std::string, MethodArgsMap>;
 
 
 InterfaceMethodMap interfaceMethodMap;
@@ -58,7 +63,28 @@ InterfaceMethodMap interfaceMethodMap;
 namespace
 {
 
+/** it will have only objects which have Associations */
+ObjectPropertyStringValue objectsAssociationMap;
+
  sdbusplus::bus::bus _bus = sdbusplus::bus::new_default();
+
+template <class TYPE>
+std::string declareArray(const Value& variantVar, char declarType)
+{
+    TYPE array = std::get<TYPE>(variantVar);
+    std::string value{declarType};
+    value += " = ";
+    auto counter = array.size();
+    if (counter > 0)
+    {
+        value += std::to_string(array.at(0));
+        for (counter = 1; counter < array.size(); ++counter)
+        {
+            value += '\t' + std::to_string(array.at(counter));
+        }
+    }
+    return value;
+}
 
 /**
  * @brief variantToString
@@ -125,6 +151,34 @@ std::string variantToString(const Value &variantVar)
             }
         }
     }
+    else if (std::holds_alternative<std::vector<uint8_t>>(variantVar))
+    {
+        value = declareArray<std::vector<uint8_t>>(variantVar, 'Y');
+    }
+    else if (std::holds_alternative<std::vector<int16_t>>(variantVar))
+    {
+        value = declareArray<std::vector<int16_t>>(variantVar, 'N');
+    }
+    else if (std::holds_alternative<std::vector<uint16_t>>(variantVar))
+    {
+        value = declareArray<std::vector<uint16_t>>(variantVar, 'Q');
+    }
+    else if (std::holds_alternative<std::vector<int32_t>>(variantVar))
+    {
+        value = declareArray<std::vector<int32_t>>(variantVar, 'I');
+    }
+    else if (std::holds_alternative<std::vector<uint32_t>>(variantVar))
+    {
+        value = declareArray<std::vector<uint32_t>>(variantVar, 'U');
+    }
+    else if (std::holds_alternative<std::vector<int64_t>>(variantVar))
+    {
+        value = declareArray<std::vector<int64_t>>(variantVar, 'X');
+    }
+    else if (std::holds_alternative<std::vector<uint64_t>>(variantVar))
+    {
+        value = declareArray<std::vector<uint64_t>>(variantVar, 'T');
+    }
     else if(std::holds_alternative<std::vector<Association>>(variantVar))
     {
         std::vector<Association> associations =
@@ -172,10 +226,29 @@ readXml(std::istream& is,
         }
         else if (ifs != nullptr && f.first == "interface")
         {
-           std::string interface = f.second.get("<xmlattr>.name", "");
-           if (   (interfaceMatch.empty() == true
-                     || interface.find(interfaceMatch) != std::string::npos)
-               && (interface.find("org.freedesktop.DBus.", 0) != 0))
+            std::string interface = f.second.get("<xmlattr>.name", "");
+            // ignore "org.freedesktop.DBus." because it is the default
+            if (interface.find("org.freedesktop.DBus.", 0) == 0)
+            {
+                if (interface != "org.freedesktop.DBus.ObjectManager")
+                {
+                    // Standard D-Bus interface, it needs special handling
+                    continue;
+                }
+            }
+            /**
+             *  default is to ignore Associations but
+             *     meson -Dkeep-association-definition can used
+             */
+
+#ifdef IGNORE_ASSOCIATIONS
+            if (interface == "xyz.openbmc_project.Association.Definitions")
+            {
+                continue;
+            }
+#endif
+           if (interfaceMatch.empty() == true ||
+                    interface.find(interfaceMatch) != std::string::npos)
            {
                MethodArgsMap methodArgsMap;
                ifs->push_back(interface);
@@ -331,7 +404,7 @@ void objectTreeValues(const std::string &service,
         auto response = _bus.call(msg);
         response.read(xml);
         std::istringstream xml_stream(xml);
-     //  printf("%s\n", xml.c_str());
+     //  fprintf(stderr, "%s\n", xml.c_str());
         std::vector<std::string> interfaceList;
         auto children = readXml(xml_stream, interfaceMatch, &interfaceList);
 
@@ -345,6 +418,24 @@ void objectTreeValues(const std::string &service,
                 PropertyStringMap stringValues;
                 copyPropertyMapToPropertyStringMap(propertiesValues,
                                                    &stringValues);
+                /**
+                 *   Association properties will be created later,
+                 *
+                 *   First the all Objects are created, then
+                 *     Association properties are created, so all connections
+                 *     already exists.
+                 *
+                 *   To work it is necessary xyz.openbmc_project.ObjectMapper
+                 *     to start first from this service.
+                 */
+                if (intf_name == "xyz.openbmc_project.Association.Definitions")
+                {
+                    InterfaceProperties interfaceDataAssociation;
+                    interfaceDataAssociation[intf_name] = stringValues;
+                    objectsAssociationMap[path] = interfaceDataAssociation;
+                    continue; // dont store Association into interfaceData
+                }
+                // normal interface
                 interfaceData[intf_name] = stringValues;
             }
         }
@@ -355,7 +446,7 @@ void objectTreeValues(const std::string &service,
         }
         else
         {
-            printf ("interfaceData.empty() == true\n");
+          //  fprintf(stderr, "interfaceData.empty() == true\n");
         }
         for (auto const& child:  children)
         {
@@ -403,6 +494,9 @@ objectTreeValues(const std::string &service,
     {
         printf("service: %s\n",  service.c_str());
         printObjectPropertyStringValue(tree, service);
+#ifndef IGNORE_ASSOCIATIONS
+        printObjectPropertyStringValue(objectsAssociationMap, service);
+#endif
     }
 
     return tree;
