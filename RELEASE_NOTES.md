@@ -1,5 +1,8 @@
 # RELEASE NOTES
 
+## Version 0.96 May 29 2024
+Added array of doubles as supported type
+
 ## Version 0.97 Mar 15 2024
 #### Populating properly the Standard D-Bus interface 'org.freedesktop.DBus.ObjectManager' as following:
 ```
@@ -15,6 +18,8 @@ The following table provides an equivalence among C++, Stamdard DBus types and d
 | C++ type                                           |  Stamdard DBus type|   dbus-populate-tool type|
 |-----           ----------------------------------- |-----            -- |-----             ------- |
 | bool                                               | b                  | b                        |
+| double                                             | d                  | d                        |
+| vector&lt;double&gt;                               | ad                 | D                        |
 | uint8_t                                            | y                  | y                        |
 | vector&lt;uint8_t&gt;                              | ay                 | Y                        |
 | int16_t                                            | n                  | n                        |

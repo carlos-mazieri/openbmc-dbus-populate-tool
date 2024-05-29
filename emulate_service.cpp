@@ -362,11 +362,25 @@ bool parse_line(const std::string& line,
                     ok = createProperty(property, intV);
                     break;
                 }
-                case 'S': // array if strings
+                case 'D': // array of doubles
                 {
-                   std::vector<std::string> arrarStrings;
-                   boost::split(arrarStrings, value, boost::is_any_of("\t"));
-                   ok = createProperty(property, arrarStrings);
+                    std::vector<std::string> arrayStrings;
+                    boost::split(arrayStrings, value, boost::is_any_of("\t"));
+                    std::vector<double> arrayDoubles;
+                    for(auto& strDouble : arrayStrings)
+                    {
+                        auto doubleValue  =
+                             static_cast<double>(std::stod(strDouble));
+                        arrayDoubles.push_back(doubleValue);
+                    }
+                    ok = createProperty(property, arrayDoubles);
+                    break;
+                }
+                case 'S': // array of strings
+                {
+                   std::vector<std::string> arrayStrings;
+                   boost::split(arrayStrings, value, boost::is_any_of("\t"));
+                   ok = createProperty(property, arrayStrings);
                    break;
                 }
                 case 'Y': // array of uint8_t
