@@ -1,6 +1,6 @@
 # RELEASE NOTES
 
-## Version 0.96 May 29 2024
+## Version 0.98 May 29 2024
 Added array of doubles as supported type
 
 ## Version 0.97 Mar 15 2024
