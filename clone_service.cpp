@@ -408,7 +408,10 @@ void objectTreeValues(const std::string &service,
         auto response = _bus.call(msg);
         response.read(xml);
         std::istringstream xml_stream(xml);
-     //  fprintf(stderr, "%s\n", xml.c_str());
+#if defined(DEBUG)        
+        fprintf(stderr, "%s\n", xml.c_str());
+        fflush(sderr);
+#endif        
         std::vector<std::string> interfaceList;
         auto children = readXml(xml_stream, interfaceMatch, &interfaceList);
 

@@ -277,11 +277,15 @@ bool parse_line(const std::string& line,
                 return true;
             }
             auto property = sessions.at(0);
-            auto value =  sessions.at(2);
+            std::string value =  sessions.at(2);
             auto type  = sessions.at(1);
             boost::algorithm::trim(property);
             boost::algorithm::trim(value);
             boost::algorithm::trim(type);
+            if (value.empty())
+            {
+                value = std::string{"0"};
+            }
 
             bool ok = false;
             switch (type.at(0))
@@ -369,8 +373,11 @@ bool parse_line(const std::string& line,
                     std::vector<double> arrayDoubles;
                     for(auto& strDouble : arrayStrings)
                     {
-                        auto doubleValue  =
-                             static_cast<double>(std::stod(strDouble));
+                        double doubleValue = 0.0;
+                        if (false == strDouble.empty())
+                        {
+                            doubleValue = static_cast<double>(std::stod(strDouble));
+                        }
                         arrayDoubles.push_back(doubleValue);
                     }
                     ok = createProperty(property, arrayDoubles);
