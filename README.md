@@ -27,7 +27,7 @@ $ ninja -v -C ../build
 There are two options:
 ```
  -Dreadonly=enabled   -> create properties are readonly, (default is readWrite)
- -Dservicefile='"fullpath-filename"'   -> load this file instead accepting files from command line
+ -Dservicefile='"fullpath-filename"'   -> load this file instead of accepting files from the command line
 ```
 
 ## Running Examples
@@ -105,8 +105,8 @@ In the example above almost all properties are **type** 's' meaning strings.
 
 The following table provides an equivalence among C++, Stamdard DBus types and dbus-populate-tool supported types:
 
-| C++ type                                           |  Stamdard DBus type|   dbus-populate-tool type|
-|-----           ----------------------------------- |-----            -- |-----             ------- |
+| C++ type                                           |  Standard DBus type|   dbus-populate-tool type|
+|----------------------------------- |-----            |-----           |
 | bool                                               | b                  | b                        |
 | uint8_t                                            | y                  | y                        |
 | vector&lt;uint8_t&gt;                              | ay                 | Y                        |
