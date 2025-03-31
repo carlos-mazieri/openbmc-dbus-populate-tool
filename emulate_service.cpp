@@ -1,17 +1,19 @@
 #include "config.h"
-#include "methods_map.hpp"
+
 #include "emulate_service.hpp"
 
+#include "methods_map.hpp"
+
+#include <boost/algorithm/string.hpp>
 #include <boost/asio/io_service.hpp>
 #include <sdbusplus/asio/object_server.hpp>
 #include <sdbusplus/server/manager.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include <fstream>
-#include <string>
-#include <vector>
 #include <iostream>
+#include <string>
 #include <tuple>
+#include <vector>
 
 #define HEXA_BASE 16
 #define DECIMAL_BASE 10
@@ -21,17 +23,17 @@ namespace local
 
 boost::asio::io_service io;
 
-const std::string const_service   {"service:"};
-const std::string const_path      {"path:"};
-const std::string const_interface {"interface:"};
-const std::string const_method    {"method:"};
+const std::string const_service{"service:"};
+const std::string const_path{"path:"};
+const std::string const_interface{"interface:"};
+const std::string const_method{"method:"};
 
 std::string service_name{};
 std::string path{};
 std::string interface{};
 std::string method{};
 
-std::shared_ptr<sdbusplus::asio::dbus_interface> iface  = nullptr;
+std::shared_ptr<sdbusplus::asio::dbus_interface> iface = nullptr;
 std::shared_ptr<sdbusplus::asio::connection> systemBus = nullptr;
 std::vector<std::unique_ptr<sdbusplus::server::manager_t>> dbusManagedObjects;
 
@@ -43,8 +45,7 @@ unsigned int association_counter{0};
 
 std::vector<std::string> method_list;
 
-
-static int  serviceReadMethod = PROPERTY_READWRITE; // defaul allow changes
+static int serviceReadMethod = PROPERTY_READWRITE; // defaul allow changes
 
 int64_t string2Uint64(const std::string& value)
 {
@@ -60,7 +61,7 @@ int64_t string2Uint64(const std::string& value)
     {
         return strTrue == true ? 1 : 0; // 1 if value is one of Trues
     }
-    else // any decimal or hexa value
+    else                                // any decimal or hexa value
     {
         if (value.at(0) == '0' && value.size() > 2 &&
             (value.at(1) == 'x' || value.at(1) == 'X'))
@@ -122,10 +123,7 @@ struct AssociationInfo
     bool active;
     std::string property;
 
-    AssociationInfo() : active(false)
-    {
-
-    }
+    AssociationInfo() : active(false) {}
     void store(std::vector<std::string>& array)
     {
         while (array.size() < 3)
@@ -133,9 +131,7 @@ struct AssociationInfo
             array.push_back(std::string{""});
         }
         association.push_back(
-                    std::make_tuple(array.at(0),
-                                    array.at(1),
-                                    array.at(2)));
+            std::make_tuple(array.at(0), array.at(1), array.at(2)));
     }
     void clear()
     {
@@ -156,7 +152,8 @@ struct AssociationInfo
         if (ok == true)
         {
             std::cout << "\t\tassociation [" << ++association_counter << "] "
-                      << path << " " << interface << " Associations" << std::endl;
+                      << path << " " << interface << " Associations"
+                      << std::endl;
             // even empty it is necessary to create Association
             ok = createProperty(property, association);
         }
@@ -165,16 +162,14 @@ struct AssociationInfo
     }
 };
 
-
 AssociationInfo association;
-
 
 //=======================================================================
 /**
-* @brief parse_line parses a single line and perform the service populate
-* @param
-* @return true OK, false some error
-*/
+ * @brief parse_line parses a single line and perform the service populate
+ * @param
+ * @return true OK, false some error
+ */
 //=======================================================================
 bool parse_line(const std::string& line,
                 sdbusplus::asio::object_server& objServer)
@@ -185,12 +180,12 @@ bool parse_line(const std::string& line,
         boost::algorithm::trim(service_name);
         try
         {
-             systemBus->request_name(service_name.c_str());
+            systemBus->request_name(service_name.c_str());
         }
         catch (...)
         {
             fprintf(stderr, "ERROR: Could not create the service %s\n",
-                       service_name.c_str());
+                    service_name.c_str());
             return false;
         }
     }
@@ -202,7 +197,7 @@ bool parse_line(const std::string& line,
         {
             std::vector<std::string> sessions;
             boost::split(sessions, line, boost::is_any_of(":"));
-            auto value =  sessions.at(1);
+            auto value = sessions.at(1);
             boost::algorithm::trim(value);
             std::vector<std::string> arrayStrings;
             boost::split(arrayStrings, value, boost::is_any_of("\t"));
@@ -221,8 +216,8 @@ bool parse_line(const std::string& line,
         boost::algorithm::trim(path);
         path_counter++;
 #if !defined(DEFAULT_SERVICE_FILE)
-        std::cout << "creating object path [" << path_counter << "] " <<
-                     path << std::endl;
+        std::cout << "creating object path [" << path_counter << "] " << path
+                  << std::endl;
 #endif
     }
     else if (line.find(const_interface) == 0)
@@ -231,8 +226,8 @@ bool parse_line(const std::string& line,
         boost::algorithm::trim(interface);
         interface_counter++;
 #if !defined(DEFAULT_SERVICE_FILE)
-        std::cout << "\tinterface[" << interface_counter << "] "
-                  << path << " " << interface << std::endl;
+        std::cout << "\tinterface[" << interface_counter << "] " << path << " "
+                  << interface << std::endl;
 #endif
         if (iface != nullptr)
         {
@@ -246,8 +241,11 @@ bool parse_line(const std::string& line,
         // special Standard D-Bus interface, it needs Server Manager
         if (interface == "org.freedesktop.DBus.ObjectManager")
         {
-            auto dbusManagedObjectInstance = std::make_unique<sdbusplus::server::manager_t>(*local::systemBus, path.c_str());
-            local::dbusManagedObjects.push_back(std::move(dbusManagedObjectInstance));
+            auto dbusManagedObjectInstance =
+                std::make_unique<sdbusplus::server::manager_t>(
+                    *local::systemBus, path.c_str());
+            local::dbusManagedObjects.push_back(
+                std::move(dbusManagedObjectInstance));
             iface = nullptr;
         }
         else
@@ -277,8 +275,8 @@ bool parse_line(const std::string& line,
                 return true;
             }
             auto property = sessions.at(0);
-            std::string value =  sessions.at(2);
-            auto type  = sessions.at(1);
+            std::string value = sessions.at(2);
+            auto type = sessions.at(1);
             boost::algorithm::trim(property);
             boost::algorithm::trim(value);
             boost::algorithm::trim(type);
@@ -298,9 +296,12 @@ bool parse_line(const std::string& line,
                 }
                 case 'b': // bool
                 {
-                    bool boolean =
-                        (value == "yes"|| value == "Yes" || value == "YES") ?
-                                            true : false;
+                    bool boolean = (value == "true" || value == "True" ||
+                                    value == "TRUE" || value == "yes" ||
+                                    value == "Yes" || value == "YES" ||
+                                    value == "1")
+                                       ? true
+                                       : false;
                     ok = createProperty(property, boolean);
                     break;
                 }
@@ -310,13 +311,13 @@ bool parse_line(const std::string& line,
                     ok = createProperty(property, intV);
                     break;
                 }
-                case 'q':  // uint16_t
+                case 'q': // uint16_t
                 {
                     uint16_t intV = static_cast<uint16_t>(std::stol(value));
                     ok = createProperty(property, intV);
                     break;
                 }
-                case 'i':  // int32_t
+                case 'i': // int32_t
                 {
                     int32_t intV = 0;
                     int tempV = 0;
@@ -327,7 +328,7 @@ bool parse_line(const std::string& line,
                     ok = createProperty(property, intV);
                     break;
                 }
-                case 'u':  // uint32_t
+                case 'u': // uint32_t
                 {
                     uint32_t intV = 0;
                     long unsigned int tempV = 0;
@@ -338,7 +339,7 @@ bool parse_line(const std::string& line,
                     ok = createProperty(property, intV);
                     break;
                 }
-                case 'x':  // int64_t
+                case 'x': // int64_t
                 {
                     int64_t intV = 0;
                     long long int tempV = 0;
@@ -349,7 +350,7 @@ bool parse_line(const std::string& line,
                     ok = createProperty(property, intV);
                     break;
                 }
-                case 't':  // uint64_t
+                case 't': // uint64_t
                 {
                     uint64_t intV = 0;
                     long long unsigned tempV = 0;
@@ -360,7 +361,7 @@ bool parse_line(const std::string& line,
                     ok = createProperty(property, intV);
                     break;
                 }
-                case 'd':  // double
+                case 'd': // double
                 {
                     double intV = static_cast<double>(std::stod(value));
                     ok = createProperty(property, intV);
@@ -371,12 +372,13 @@ bool parse_line(const std::string& line,
                     std::vector<std::string> arrayStrings;
                     boost::split(arrayStrings, value, boost::is_any_of("\t"));
                     std::vector<double> arrayDoubles;
-                    for(auto& strDouble : arrayStrings)
+                    for (auto& strDouble : arrayStrings)
                     {
                         double doubleValue = 0.0;
                         if (false == strDouble.empty())
                         {
-                            doubleValue = static_cast<double>(std::stod(strDouble));
+                            doubleValue =
+                                static_cast<double>(std::stod(strDouble));
                         }
                         arrayDoubles.push_back(doubleValue);
                     }
@@ -385,57 +387,57 @@ bool parse_line(const std::string& line,
                 }
                 case 'S': // array of strings
                 {
-                   std::vector<std::string> arrayStrings;
-                   boost::split(arrayStrings, value, boost::is_any_of("\t"));
-                   ok = createProperty(property, arrayStrings);
-                   break;
+                    std::vector<std::string> arrayStrings;
+                    boost::split(arrayStrings, value, boost::is_any_of("\t"));
+                    ok = createProperty(property, arrayStrings);
+                    break;
                 }
                 case 'Y': // array of uint8_t
                 {
-                   ok = createArrayNumericProperty<std::vector<uint8_t>>
-                       (property, value);
-                   break;
+                    ok = createArrayNumericProperty<std::vector<uint8_t>>(
+                        property, value);
+                    break;
                 }
                 case 'N': // array of int16_t
                 {
-                   ok = createArrayNumericProperty<std::vector<int16_t>>
-                       (property, value);
-                   break;
+                    ok = createArrayNumericProperty<std::vector<int16_t>>(
+                        property, value);
+                    break;
                 }
                 case 'Q': // array of uint16_t
                 {
-                   ok = createArrayNumericProperty<std::vector<uint16_t>>
-                       (property, value);
-                   break;
+                    ok = createArrayNumericProperty<std::vector<uint16_t>>(
+                        property, value);
+                    break;
                 }
                 case 'I': // array of int32_t
                 {
-                   ok = createArrayNumericProperty<std::vector<int32_t>>
-                       (property, value);
-                   break;
+                    ok = createArrayNumericProperty<std::vector<int32_t>>(
+                        property, value);
+                    break;
                 }
                 case 'U': // array of uint32_t
                 {
-                   ok = createArrayNumericProperty<std::vector<uint32_t>>
-                       (property, value);
-                   break;
+                    ok = createArrayNumericProperty<std::vector<uint32_t>>(
+                        property, value);
+                    break;
                 }
                 case 'X': // array of int64_t
                 {
-                   ok = createArrayNumericProperty<std::vector<int64_t>>
-                       (property, value);
-                   break;
+                    ok = createArrayNumericProperty<std::vector<int64_t>>(
+                        property, value);
+                    break;
                 }
                 case 'T': // array of uint64_t
                 {
-                   ok = createArrayNumericProperty<std::vector<uint64_t>>
-                       (property, value);
-                   break;
+                    ok = createArrayNumericProperty<std::vector<uint64_t>>(
+                        property, value);
+                    break;
                 }
                 case 'A':
                 {
-                   ok = association.setProperty(property);
-                   break;
+                    ok = association.setProperty(property);
+                    break;
                 }
                 case 's':
                 default:
@@ -447,7 +449,7 @@ bool parse_line(const std::string& line,
             if (ok == false)
             {
                 fprintf(stderr, "ERROR: property=%s value=%s \n",
-                           property.c_str(),value.c_str());
+                        property.c_str(), value.c_str());
                 return false;
             }
             else
@@ -459,9 +461,7 @@ bool parse_line(const std::string& line,
     return true;
 }
 
-
-} // local namespace
-
+} // namespace local
 
 //=======================================================================
 /**
@@ -470,7 +470,7 @@ bool parse_line(const std::string& line,
  * @return 0 OK, not zero some problem
  */
 //=======================================================================
-int emulate_service(const char *filename, int serviceMethod)
+int emulate_service(const char* filename, int serviceMethod)
 {
     local::serviceReadMethod = serviceMethod;
 
@@ -486,12 +486,15 @@ int emulate_service(const char *filename, int serviceMethod)
 
     bool ok = true;
     std::string line;
-    //int line_counter = 1;
+    // int line_counter = 1;
     while (std::getline(file, line) && ok == true)
     {
         boost::algorithm::trim(line);
-      //  std::cout <<  "line:" << line_counter++ << std::endl;
-        if (line.empty() == true || line.at(0) == '#') {continue;}
+        //  std::cout <<  "line:" << line_counter++ << std::endl;
+        if (line.empty() == true || line.at(0) == '#')
+        {
+            continue;
+        }
         ok = local::parse_line(line, objServer);
     }
     local::association.create(); // if the Association was the last property
